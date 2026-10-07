@@ -7,7 +7,7 @@
   <meta name="description" content="Offline utility suite with PDF, image, OCR, text, and productivity tools" />
   <title>Offline Utility Suite</title>
   <link rel="manifest" href="manifest.json" />
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' fill='%230f172a'/%3E%3Ctext x='50%25' y='58%25' dominant-baseline='middle' text-anchor='middle' fill='%2338bdf8' font-size='52' font-family='sans-serif'%3E%F0%9F%93%9D%3C/text%3E%3C/svg%3E" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' fill='%230f172a'/%3E%3Ctext x='50%25' y='50%25' font-size='52' fill='%2338bdf8' text-anchor='middle' dominant-baseline='middle' font-family='Arial'%3E📄%3C/text%3E%3C/svg%3E" />
   <style>
     :root {
       --bg: #0f172a;
@@ -461,6 +461,50 @@
     .element .sym { font-size: 1.35rem; }
     .element .name { font-size: 0.68rem; }
 
+    .pdf-reader-layout {
+      display: grid;
+      grid-template-columns: 180px 1fr;
+      gap: 16px;
+      margin-top: 12px;
+    }
+
+    .pdf-thumb-list {
+      max-height: 420px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .thumb-btn {
+      border: 1px solid var(--line);
+      background: rgba(148,163,184,0.04);
+      border-radius: 10px;
+      padding: 8px;
+      cursor: pointer;
+      color: var(--text);
+      text-align: left;
+    }
+
+    .thumb-btn.active {
+      border-color: var(--primary);
+      background: rgba(56,189,248,0.08);
+    }
+
+    .thumb-btn canvas {
+      width: 100%;
+      margin: 0 0 6px 0;
+      height: 110px;
+      object-fit: contain;
+    }
+
+    .reader-toolbar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
     @media (max-width: 900px) {
       .layout { display: block; }
       .sidebar {
@@ -470,6 +514,9 @@
         border-bottom: 1px solid var(--line);
       }
       .content { padding: 12px; }
+      .pdf-reader-layout {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
@@ -477,9 +524,7 @@
   <header class="topbar">
     <div class="brand">
       <div class="brand-badge">📄</div>
-      <div>
-        <div>Offline Utility Suite</div>
-      </div>
+      <div>Offline Utility Suite</div>
     </div>
 
     <div class="top-actions">
@@ -495,6 +540,8 @@
         <button class="tab-btn active" data-target="pdf-merge">📑 Merge PDF</button>
         <button class="tab-btn" data-target="pdf-reorder">🔄 Reorder</button>
         <button class="tab-btn" data-target="pdf-split">✂️ Split</button>
+        <button class="tab-btn" data-target="pdf-reader">📖 Reader</button>
+        <button class="tab-btn" data-target="pdf-quality">⚡ Quality</button>
         <button class="tab-btn" data-target="pdf-to-image">🖼️ PDF to Image</button>
         <button class="tab-btn" data-target="text-to-pdf">📝 Text to PDF</button>
       </div>
@@ -504,6 +551,7 @@
         <button class="tab-btn" data-target="image-to-pdf">🖨️ Image to PDF</button>
         <button class="tab-btn" data-target="image-editor">✏️ Editor</button>
         <button class="tab-btn" data-target="image-tools">📐 Resize & Compress</button>
+        <button class="tab-btn" data-target="pdf-extract-images">🧲 Extract Images</button>
         <button class="tab-btn" data-target="ocr-tool">🔍 OCR & Text</button>
       </div>
 
@@ -556,9 +604,7 @@
 
         <div class="card-grid">
           <div class="card tool-card">
-            <div>
-              <h3>Load PDF</h3>
-            </div>
+            <div><h3>Load PDF</h3></div>
             <input type="file" id="reorderInput" accept="application/pdf" />
             <div class="preview-box" id="reorderPreviewBox" style="display:none;">
               <div id="reorderPageList"></div>
@@ -582,9 +628,7 @@
 
         <div class="card-grid">
           <div class="card tool-card">
-            <div>
-              <h3>Upload Document</h3>
-            </div>
+            <div><h3>Upload Document</h3></div>
             <input type="file" id="splitInput" accept="application/pdf" />
             <div class="form-grid">
               <div>
@@ -606,6 +650,65 @@
         </div>
       </section>
 
+      <section id="pdf-reader" class="panel">
+        <div class="panel-header">
+          <div>
+            <h1 class="panel-title">PDF Reader</h1>
+            <div class="panel-sub">Open, preview, and page through PDF files with thumbnails.</div>
+          </div>
+        </div>
+
+        <div class="card-grid">
+          <div class="card tool-card">
+            <div><h3>Open PDF</h3></div>
+            <input type="file" id="pdfReaderInput" accept="application/pdf" />
+            <div class="reader-toolbar">
+              <button class="secondary-btn" id="readerPrevBtn">◀ Prev</button>
+              <button class="secondary-btn" id="readerNextBtn">Next ▶</button>
+              <span class="badge" id="readerPageStatus">0 / 0</span>
+            </div>
+            <div class="pdf-reader-layout">
+              <div class="pdf-thumb-list" id="pdfThumbList"></div>
+              <div>
+                <canvas id="pdfReaderCanvas" width="600" height="800" style="max-width:100%;"></canvas>
+              </div>
+            </div>
+            <div class="status" id="pdfReaderStatus"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="pdf-quality" class="panel">
+        <div class="panel-header">
+          <div>
+            <h1 class="panel-title">PDF Quality & Compression</h1>
+            <div class="panel-sub">Reduce page size and optimize quality for storage and sharing.</div>
+          </div>
+        </div>
+
+        <div class="card-grid">
+          <div class="card tool-card">
+            <div><h3>Compress PDF</h3></div>
+            <input type="file" id="pdfCompressInput" accept="application/pdf" />
+            <div class="form-grid">
+              <div>
+                <label for="pdfQualitySlider">Quality</label>
+                <input type="range" id="pdfQualitySlider" min="0.3" max="1" step="0.1" value="0.7" />
+              </div>
+              <div>
+                <label for="pdfScaleInput">Render Scale</label>
+                <input type="number" id="pdfScaleInput" value="1.2" min="0.5" max="2" step="0.1" />
+              </div>
+            </div>
+            <div class="action-row">
+              <button class="action-btn" id="compressPdfBtn">Optimize PDF</button>
+            </div>
+            <div class="progress" id="pdfCompressProgress"><div class="progress-bar" id="pdfCompressProgressBar"></div></div>
+            <div class="status" id="pdfCompressStatus"></div>
+          </div>
+        </div>
+      </section>
+
       <section id="pdf-to-image" class="panel">
         <div class="panel-header">
           <div>
@@ -616,14 +719,12 @@
 
         <div class="card-grid">
           <div class="card tool-card">
-            <div>
-              <h3>Upload PDF</h3>
-            </div>
+            <div><h3>Upload PDF</h3></div>
             <input type="file" id="pdfToImageInput" accept="application/pdf" />
             <div class="form-grid">
               <div>
-                <label for="pdfScaleInput">Scale</label>
-                <input type="number" id="pdfScaleInput" value="1.5" min="0.5" max="3" step="0.1" />
+                <label for="pdfScaleInput2">Scale</label>
+                <input type="number" id="pdfScaleInput2" value="1.5" min="0.5" max="3" step="0.1" />
               </div>
             </div>
             <div class="action-row">
@@ -645,9 +746,7 @@
 
         <div class="card-grid">
           <div class="card tool-card">
-            <div>
-              <h3>Enter Text</h3>
-            </div>
+            <div><h3>Enter Text</h3></div>
             <textarea id="textToPdfInput" placeholder="Type or paste your content here..."></textarea>
             <div class="form-grid">
               <div>
@@ -673,9 +772,7 @@
 
         <div class="card-grid">
           <div class="card tool-card">
-            <div>
-              <h3>Images</h3>
-            </div>
+            <div><h3>Images</h3></div>
             <div class="dropzone" id="imagePdfDropzone">
               <div>🖼️ Drag & drop images here</div>
               <div style="margin-top: 8px;">or click to browse</div>
@@ -712,9 +809,7 @@
 
         <div class="card-grid">
           <div class="card tool-card">
-            <div>
-              <h3>Select Image</h3>
-            </div>
+            <div><h3>Select Image</h3></div>
             <input type="file" id="imageEditorInput" accept="image/*" />
             <div class="form-grid">
               <div>
@@ -756,9 +851,7 @@
 
         <div class="card-grid">
           <div class="card tool-card">
-            <div>
-              <h3>Image Compression</h3>
-            </div>
+            <div><h3>Image Compression</h3></div>
             <input type="file" id="resizeImageInput" accept="image/*" />
             <div class="form-grid">
               <div>
@@ -778,6 +871,33 @@
         </div>
       </section>
 
+      <section id="pdf-extract-images" class="panel">
+        <div class="panel-header">
+          <div>
+            <h1 class="panel-title">Extract Images from PDF</h1>
+            <div class="panel-sub">Render PDF pages and export them as high-quality PNG images.</div>
+          </div>
+        </div>
+
+        <div class="card-grid">
+          <div class="card tool-card">
+            <div><h3>Select PDF</h3></div>
+            <input type="file" id="extractImagesInput" accept="application/pdf" />
+            <div class="form-grid">
+              <div>
+                <label for="extractScaleInput">Scale</label>
+                <input type="number" id="extractScaleInput" value="1.5" min="0.5" max="3" step="0.1" />
+              </div>
+            </div>
+            <div class="action-row">
+              <button class="action-btn" id="extractImagesBtn">Export PDF Pages as Images</button>
+            </div>
+            <div class="progress" id="extractImagesProgress"><div class="progress-bar" id="extractImagesProgressBar"></div></div>
+            <div class="status" id="extractImagesStatus"></div>
+          </div>
+        </div>
+      </section>
+
       <section id="ocr-tool" class="panel">
         <div class="panel-header">
           <div>
@@ -788,9 +908,7 @@
 
         <div class="card-grid">
           <div class="card tool-card">
-            <div>
-              <h3>Upload Image</h3>
-            </div>
+            <div><h3>Upload Image</h3></div>
             <input type="file" id="ocrInput" accept="image/*,.pdf" />
             <div class="preview-box">
               <img id="ocrPreview" alt="OCR preview" style="display:none;" />
@@ -815,9 +933,7 @@
 
         <div class="card-grid">
           <div class="card tool-card">
-            <div>
-              <h3>Create favicon</h3>
-            </div>
+            <div><h3>Create favicon</h3></div>
             <div class="form-grid">
               <div>
                 <label for="faviconTextInput">Text</label>
