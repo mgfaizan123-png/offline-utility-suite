@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#1e293b">
+    <meta name="description" content="Offline PDF and Image Utility Tool - Merge, Convert, Reorder PDFs and Edit Images">
+    <title>Offline Utility Suite</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%231e293b' width='192' height='192'/><text x='50%' y='50%' font-size='80' fill='%2338bdf8' text-anchor='middle' dominant-baseline='middle' font-family='Arial'>⚙️</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%231e293b' width='192' height='192'/><text x='50%' y='50%' font-size='80' fill='%2338bdf8' text-anchor='middle' dominant-baseline='middle' font-family='Arial'>⚙️</text></svg>">
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            background-color: #f4f6f9;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            color: #38bdf8;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .sidebar {
+            background: #1e293b;
+            padding: 8px;
+            display: flex;
+            gap: 5px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            flex-wrap: wrap;
+            max-height: 120px;
+            border-bottom: 1px solid #0f172a;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: 1px solid #475569;
+            color: #94a3b8;
+            padding: 10px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            white-space: nowrap;
+            font-size: 13px;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .tab-btn:hover {
+            background: #0f172a;
+            border-color: #38bdf8;
+            color: #38bdf8;
+        }
+
+        .tab-btn.active {
+            background: #0f172a;
+            color: #38bdf8;
+            border-color: #38bdf8;
+            font-weight: bold;
+        }
+
+        .content {
+            padding: 15px;
+            overflow-y: auto;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel {
+            display: none;
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .panel.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel h3 {
+            margin-bottom: 15px;
+            color: #1e293b;
+            font-size: 18px;
+        }
+
+        .form-group {
+            margin-bottom: 12px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            font-size: 14px;
+            color: #1e293b;
+        }
+
+        input[type="file"],
+        input[type="number"],
+        input[type="range"],
+        select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 14px;
+            background: #f8fafc;
+        }
+
+        input[type="file"]:focus,
+        input[type="number"]:focus,
+        select:focus {
+            outline: none;
+            border-color: #38bdf8;
+            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.1);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        button.action-btn,
+        button.secondary-btn {
+            padding: 12px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            border: none;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            flex: 1;
+            min-width: 120px;
+        }
+
+        button.action-btn {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: white;
+        }
+
+        button.action-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+
+        button.action-btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        button.secondary-btn {
+            background: #e2e8f0;
+            color: #1e293b;
+        }
+
+        button.secondary-btn:hover:not(:disabled) {
+            background: #cbd5e1;
+        }
+
+        button.action-btn:disabled,
+        button.secondary-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .preview-container {
+            margin-top: 15px;
+            padding: 10px;
+            background: #f8fafc;
+            border-radius: 6px;
+            flex: 1;
+            overflow-y: auto;
+            min-height: 200px;
+        }
+
+        canvas,
+        video,
+        img {
+            max-width: 100%;
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+
+        .file-list {
+            list-style: none;
+            margin: 10px 0;
+        }
+
+        .file-item {
+            background: #f8fafc;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 3px solid #38bdf8;
+        }
+
+        .file-item span {
+            font-size: 13px;
+            color: #475569;
+        }
+
+        .file-item button {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .file-item button:hover {
+            background: #dc2626;
+        }
+
+        .drag-drop-area {
+            border: 2px dashed #cbd5e1;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f8fafc;
+            margin-bottom: 10px;
+        }
+
+        .drag-drop-area:hover,
+        .drag-drop-area.dragover {
+            border-color: #38bdf8;
+            background: #f0f9ff;
+        }
+
+        .drag-drop-area p {
+            color: #64748b;
+            font-size: 14px;
+            margin: 5px 0;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #e2e8f0;
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #2563eb, #38bdf8);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .alert {
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .alert.success {
+            background: #dcfce7;
+            color: #166534;
+            border-left: 3px solid #22c55e;
+        }
+
+        .alert.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border-left: 3px solid #ef4444;
+        }
+
+        .alert.info {
+            background: #dbeafe;
+            color: #1e40af;
+            border-left: 3px solid #3b82f6;
+        }
+
+        .pdf-page-item {
+            background: #f8fafc;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #cbd5e1;
+        }
+
+        .pdf-page-item img {
+            height: 50px;
+            width: auto;
+            margin-right: 10px;
+        }
+
+        .pdf-controls {
+            display: flex;
+            gap: 5px;
+        }
+
+        .pdf-controls button {
+            background: #38bdf8;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .pdf-controls button:hover {
+            background: #0ea5e9;
+        }
+
+        .slider-value {
+            display: inline-block;
+            background: #38bdf8;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+
+        .footer {
+            background: #f8fafc;
+            padding: 10px;
+            text-align: center;
+            font-size: 12px;
+            color: #64748b;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        @media (max-width: 480px) {
+            .header {
+                font-size: 16px;
+                padding: 10px;
+            }
+
+            .sidebar {
+                max-height: 150px;
+                padding: 5px;
+            }
+
+            .tab-btn {
+                font-size: 12px;
+                padding: 8px 10px;
+            }
+
+            .content {
+                padding: 10px;
+            }
+
+            .panel {
+                padding: 12px;
+            }
+
+            button.action-btn,
+            button.secondary-btn {
+                min-width: 100px;
+                padding: 10px 12px;
+                font-size: 13px;
+            }
+        }
+
+        .loader {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #e2e8f0;
+            border-top-color: #38bdf8;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .install-prompt {
+            background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: none;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .install-prompt.show {
+            display: flex;
+        }
+
+        .install-prompt button {
+            background: white;
+            color: #0ea5e9;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .install-prompt button:hover {
+            background: #f0f9ff;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">⚙️ Offline Utility Suite</div>
+
+    <div id="installPrompt" class="install-prompt">
+        <span>📱 Install as app on your device</span>
+        <button onclick="installApp()">Install</button>
+        <button onclick="dismissInstallPrompt()" style="background: rgba(255,255,255,0.3); color: white;">Dismiss</button>
+    </div>
+
+    <div class="sidebar">
+        <button class="tab-btn active" onclick="switchTab('pdf-merge', event)">📑 Merge PDF</button>
+        <button class="tab-btn" onclick="switchTab('pdf-reorder', event)">🔄 Reorder PDF</button>
+        <button class="tab-btn" onclick="switchTab('image-to-pdf', event)">🖼️ Image to PDF</button>
+        <button class="tab-btn" onclick="switchTab('image-editor', event)">✏️ Image Editor</button>
+        <button class="tab-btn" onclick="switchTab('pdf-tools', event)">🔧 PDF Tools</button>
+    </div>
+
+    <div class="content">
+        <!-- PDF MERGE -->
+        <div id="pdf-merge" class="panel active">
+            <h3>Merge Multiple PDFs</h3>
+            <div class="form-group">
+                <label>Select PDF files to merge:</label>
+                <div class="drag-drop-area" id="mergeDragArea">
+                    <p>📂 Drag & drop PDFs here or click to select</p>
+                    <input type="file" id="mergeInput" accept=".pdf" multiple style="display: none;">
+                </div>
+            </div>
+            <div id="mergeFileList" class="preview-container" style="display: none;">
+                <h4 style="margin-bottom: 10px;">Selected Files:</h4>
+                <ul id="mergeFiles" class="file-list"></ul>
+            </div>
+            <div class="button-group">
+                <button class="action-btn" onclick="mergePdfs()">Merge PDFs</button>
+                <button class="secondary-btn" onclick="clearMergeList()">Clear</button>
+            </div>
+            <div id="mergeProgress" style="display: none;">
+                <p style="font-size: 13px; margin-bottom: 5px;">Processing...</p>
+                <div class="progress-bar">
+                    <div id="mergeProgressFill" class="progress-fill"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PDF REORDER -->
+        <div id="pdf-reorder" class="panel">
+            <h3>Reorder & Edit PDF Pages</h3>
+            <div class="form-group">
+                <label>Select PDF file:</label>
+                <input type="file" id="reorderInput" accept=".pdf" onchange="loadPdfForReorder(event)">
+            </div>
+            <div id="reorderPreview" class="preview-container" style="display: none;">
+                <h4 style="margin-bottom: 10px;">Pages (drag to reorder):</h4>
+                <div id="reorderPages" style="display: flex; flex-direction: column; gap: 8px;"></div>
+            </div>
+            <div class="button-group">
+                <button class="action-btn" onclick="savePdfReorder()">Save Reordered PDF</button>
+                <button class="secondary-btn" onclick="clearReorderList()">Clear</button>
+            </div>
+        </div>
+
+        <!-- IMAGE TO PDF -->
+        <div id="image-to-pdf" class="panel">
+            <h3>Convert Images to PDF</h3>
+            <div class="form-group">
+                <label>Select images (JPG, PNG):</label>
+                <div class="drag-drop-area" id="imgDragArea">
+                    <p>📸 Drag & drop images here or click to select</p>
+                    <input type="file" id="imageToPdfInput" accept="image/*" multiple style="display: none;">
+                </div>
+            </div>
+            <div id="imgFileList" class="preview-container" style="display: none;">
+                <h4 style="margin-bottom: 10px;">Selected Images:</h4>
+                <ul id="imgFiles" class="file-list"></ul>
+            </div>
+            <div class="form-group">
+                <label>PDF Page Size:</label>
+                <select id="pageSize">
+                    <option value="a4">A4 (210x297mm)</option>
+                    <option value="letter">Letter (8.5x11")</option>
+                    <option value="auto">Auto (Image Size)</option>
+                </select>
+            </div>
+            <div class="button-group">
+                <button class="action-btn" onclick="convertImagesToPdf()">Create PDF</button>
+                <button class="secondary-btn" onclick="clearImageList()">Clear</button>
+            </div>
+            <div id="imgProgress" style="display: none;">
+                <p style="font-size: 13px; margin-bottom: 5px;">Creating PDF...</p>
+                <div class="progress-bar">
+                    <div id="imgProgressFill" class="progress-fill"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- IMAGE EDITOR -->
+        <div id="image-editor" class="panel">
+            <h3>Image Editor</h3>
+            <div class="form-group">
+                <label>Select image to edit:</label>
+                <input type="file" id="imageInput" accept="image/*" onchange="loadImage(event)">
+            </div>
+            <div id="imageControlsPanel" style="display: none;">
+                <div class="form-group">
+                    <label>Rotation: <span class="slider-value" id="rotationValue">0°</span></label>
+                    <input type="range" id="rotationSlider" min="-180" max="180" value="0" oninput="updateImagePreview()">
+                </div>
+                <div class="form-group">
+                    <label>Brightness: <span class="slider-value" id="brightnessValue">100%</span></label>
+                    <input type="range" id="brightnessSlider" min="0" max="200" value="100" oninput="updateImagePreview()">
+                </div>
+                <div class="form-group">
+                    <label>Contrast: <span class="slider-value" id="contrastValue">100%</span></label>
+                    <input type="range" id="contrastSlider" min="0" max="200" value="100" oninput="updateImagePreview()">
+                </div>
+                <div class="form-group">
+                    <label>Saturation: <span class="slider-value" id="saturationValue">100%</span></label>
+                    <input type="range" id="saturationSlider" min="0" max="200" value="100" oninput="updateImagePreview()">
+                </div>
+            </div>
+            <div class="preview-container">
+                <canvas id="imageCanvas"></canvas>
+            </div>
+            <div id="imageEditPanel" style="display: none;">
+                <div class="button-group">
+                    <button class="action-btn" onclick="downloadEditedImage()">Download Image</button>
+                    <button class="secondary-btn" onclick="resetImageEdits()">Reset</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- PDF TOOLS -->
+        <div id="pdf-tools" class="panel">
+            <h3>PDF Tools</h3>
+            <div class="form-group">
+                <label>Select PDF:</label>
+                <input type="file" id="pdfToolsInput" accept=".pdf" onchange="loadPdfForTools(event)">
+            </div>
+            <div id="pdfToolsPreview" style="display: none;">
+                <div class="form-group">
+                    <label>Delete Pages:</label>
+                    <input type="text" id="deletePages" placeholder="e.g., 1,3,5 or 2-4">
+                    <small style="color: #64748b;">Enter page numbers to delete, separated by commas or use range (2-4)</small>
+                </div>
+                <div class="form-group">
+                    <label>Rotate Pages:</label>
+                    <input type="text" id="rotatePages" placeholder="e.g., 1,3,5">
+                    <select id="rotateAngle">
+                        <option value="90">90°</option>
+                        <option value="180">180°</option>
+                        <option value="270">270°</option>
+                    </select>
+                </div>
+                <div class="button-group">
+                    <button class="action-btn" onclick="deleteAndRotatePdf()">Apply Changes</button>
+                    <button class="secondary-btn" onclick="clearPdfTools()">Clear</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        ✅ Works completely offline • 📱 Install as app • 🔒 No data uploaded
+    </div>
+
+    <!-- PDF Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="app.js"></script>
+
+</body>
+</html>
