@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PDF Rearranger</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --panel-2: #1f2937;
+      --primary: #38bdf8;
+      --accent: #22c55e;
+      --danger: #ef4444;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --border: rgba(148, 163, 184, 0.2);
+      --shadow: 0 16px 30px rgba(2, 6, 23, 0.35);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: linear-gradient(140deg, #020817, #0f172a 35%, #111827);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px 18px 48px;
+    }
+
+    .header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .title-wrap h1 {
+      margin: 0;
+      font-size: clamp(1.8rem, 3vw, 2.8rem);
+      letter-spacing: 0.04em;
+    }
+
+    .subtitle {
+      margin-top: 7px;
+      color: var(--muted);
+      font-size: 0.98rem;
+    }
+
+    .action-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+    }
+
+    button,
+    label.upload-button {
+      appearance: none;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: transform 0.18s ease, opacity 0.18s ease;
+      font-weight: 700;
+    }
+
+    button:hover,
+    label.upload-button:hover { transform: translateY(-1px); }
+
+    button:active,
+    label.upload-button:active { transform: translateY(0); }
+
+    .primary-btn {
+      background: linear-gradient(135deg, var(--primary), #2563eb);
+      color: white;
+      padding: 12px 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .secondary-btn {
+      background: rgba(148, 163, 184, 0.08);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 12px 18px;
+    }
+
+    .danger-btn {
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.35);
+      color: #fecaca;
+      padding: 10px 14px;
+    }
+
+    .upload-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 18px;
+      background: linear-gradient(135deg, var(--accent), #16a34a);
+      color: white;
+      box-shadow: var(--shadow);
+    }
+
+    input[type="file"] { display: none; }
+
+    .empty-state,
+    .workspace {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+    }
+
+    .empty-state {
+      padding: 42px 20px;
+      text-align: center;
+      min-height: 260px;
+      display: grid;
+      place-items: center;
+    }
+
+    .empty-state-inner {
+      max-width: 520px;
+    }
+
+    .empty-state h2 {
+      margin: 0 0 10px;
+      font-size: clamp(1.4rem, 3vw, 2.2rem);
+    }
+
+    .empty-state p {
+      margin: 0 0 24px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .workspace {
+      display: none;
+      padding: 18px;
+    }
+
+    .workspace.active { display: block; }
+
+    .stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 6px 0 14px;
+    }
+
+    .stat {
+      background: rgba(148, 163, 184, 0.06);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 8px 12px;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    .page-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .page-card {
+      background: rgba(17, 24, 39, 0.9);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      cursor: grab;
+      transition: border-color 0.18s ease, transform 0.18s ease;
+      position: relative;
+    }
+
+    .page-card:hover {
+      border-color: rgba(56, 189, 248, 0.7);
+      transform: translateY(-1px);
+    }
+
+    .page-card.dragging {
+      opacity: 0.45;
+      border-style: dashed;
+    }
+
+    .page-thumb {
+      width: 100%;
+      height: 220px;
+      display: block;
+      background: #0b1220;
+      object-fit: contain;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .page-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      font-size: 0.88rem;
+      color: var(--muted);
+      background: rgba(15, 23, 42, 0.8);
+    }
+
+    .remove-page {
+      padding: 6px 10px;
+      background: rgba(239, 68, 68, 0.12);
+      color: #fecaca;
+      border: 1px solid rgba(239, 68, 68, 0.35);
+      border-radius: 8px;
+      font-size: 0.8rem;
+    }
+
+    .page-card.drag-over {
+      border-color: var(--primary);
+      box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.8);
+    }
+
+    .empty-note {
+      color: var(--muted);
+      text-align: center;
+      padding: 20px 10px 0;
+    }
+
+    @media (max-width: 600px) {
+      .container { padding-left: 12px; padding-right: 12px; }
+      .header { align-items: flex-start; }
+      .action-row { width: 100%; }
+      .action-row > * { flex: 1 1 100%; }
+      .page-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="title-wrap">
+        <h1>PDF Rearranger</h1>
+        <div class="subtitle">Upload PDFs, reorder pages, and download the new file.</div>
+      </div>
+
+      <div class="action-row">
+        <label class="upload-button" for="pdfInput">Upload PDFs</label>
+        <input id="pdfInput" type="file" accept="application/pdf" multiple />
+        <button id="downloadBtn" class="primary-btn" type="button">Download Reordered PDF</button>
+      </div>
+    </div>
+
+    <div id="emptyState" class="empty-state">
+      <div class="empty-state-inner">
+        <h2>Arrange your PDF pages</h2>
+        <p>Upload one or more PDF files, drag thumbnails into the correct order, and export a clean reordered PDF in seconds.</p>
+        <label class="upload-button" for="pdfInput">Choose PDF Files</label>
+      </div>
+    </div>
+
+    <div id="workspace" class="workspace">
+      <div class="stats">
+        <div class="stat" id="totalPagesStat">Pages: 0</div>
+        <div class="stat" id="totalFilesStat">Files: 0</div>
+        <button id="clearAllBtn" type="button" class="danger-btn">Clear All</button>
+      </div>
+      <div id="pageGrid" class="page-grid"></div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="./pdf-rearranger.js"></script>
+</body>
+</html>
